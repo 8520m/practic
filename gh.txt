@@ -1,1 +1,326 @@
-elklfkf
+#include "stdafx.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <conio.h>
+#include <string.h>
+#include <malloc.h>
+#include <clocale>
+
+using namespace std;
+using namespace System;
+using namespace System::IO;
+
+#define ENTER 13
+#define ESC 27
+#define UP 72
+#define DOWN 80
+#define HOME 71
+#define END 79
+
+struct car {
+    char model[30];
+    char color[20];
+    char bodyType[20];
+    int year;
+    long price;
+    char purchaseDate[11];
+};
+
+void showMostExpensive(struct car*, int);
+void showLatestPurchase(struct car*, int);
+void showAlphabeticalLists(struct car*, int);
+void showDiagram(struct car*, int);
+void showSameColorDifferentYear(struct car*, int);
+int menu(int, int, char [][100]);
+void text_data(char*, char*);
+
+int main(array<System::String^>^ args) {
+    int i, NC;
+    FILE* in;
+    struct car* cars;
+    char BlankLine[] = "                                                       ";
+    char dan[6][100] = {
+        "Какая машина самая дорогая?                          ",
+        "Какая машина была куплена позже всех?                ",
+        "Алфавитный список и обратный алфавитный список       ",
+        "Диаграмма                                            ",
+        "Есть ли машины одного цвета но разного года выпуска? ",
+        "Выход                                                "
+    };
+    
+    setlocale(LC_CTYPE, "Russian");
+    Console::CursorVisible::set(false);
+    Console::BufferHeight = Console::WindowHeight;
+    Console::BufferWidth = Console::WindowWidth;
+    
+    if ((in = fopen("ik.dat", "r")) == NULL) {
+        printf("\nФайл cars.dat не открыт !");
+        _getch(); 
+        exit(1);
+    }
+
+    fscanf_s(in, "%d", &NC);
+    cars = (struct car*)malloc(NC * sizeof(struct car));
+    for (i = 0; i < NC; i++) {
+        fscanf_s(in, "%s %s %s %d %ld %s", cars[i].model, sizeof(cars[i].model), cars[i].color, sizeof(cars[i].color),
+            cars[i].bodyType, sizeof(cars[i].bodyType), &cars[i].year, &cars[i].price, cars[i].purchaseDate, sizeof(cars[i].purchaseDate));
+    }
+    Console::Clear();
+    Console::ForegroundColor = ConsoleColor::White;
+    Console::BackgroundColor = ConsoleColor::Black;
+    printf("Модель                Цвет      Тип            Год      Цена   Дата покупки\n");
+    printf("----------------------------------------------------------------------------\n");
+    for (i = 0; i < NC; i++) {
+        printf("%-20s %-10s %-11s %7d %10ld %-10s\n",
+            cars[i].model, cars[i].color, cars[i].bodyType, cars[i].year, cars[i].price, cars[i].purchaseDate);
+    }
+    _getch(); // Ожидание нажатия клавиши перед показом меню
+
+    while (1) {
+        Console::Clear();
+        Console::ForegroundColor = ConsoleColor::Black;
+        Console::BackgroundColor = ConsoleColor::White;
+        Console::CursorLeft = 10;
+        Console::CursorTop = 4;
+        printf(BlankLine);
+        for (i = 0; i < 6; i++) {
+            Console::CursorLeft = 10;
+            Console::CursorTop = i + 5;
+            printf(" %s ", dan[i]);
+        }
+        Console::CursorLeft = 10;
+        Console::CursorTop = 11;
+        printf(BlankLine);
+        
+        int n = menu(6, NC, dan);
+        switch (n) {
+        case 1: showMostExpensive(cars, NC); break;
+        case 2: showLatestPurchase(cars, NC); break;
+        case 3: showAlphabeticalLists(cars, NC); break;
+        case 4: showDiagram(cars, NC); break;
+        case 5: showSameColorDifferentYear(cars, NC); break;
+        case 6: free(cars); fclose(in); exit(0);
+        }
+    }
+    return 0;
+}
+
+int menu(int n, int NC, char dan[][100]) {
+    int y1 = 0, y2 = n - 1;
+    char c = 1;
+    while (c != ESC) {
+        switch (c) {
+        case DOWN: y2 = y1; y1++; break;
+        case UP: y2 = y1; y1--; break;
+        case HOME: y2 = y1; y1 = 0; break;
+        case END: y2 = y1; y1 = n - 1; break;
+        case ENTER: return y1 + 1;
+        }
+        if (y1 > n - 1) { y2 = n - 1; y1 = 0; }
+        if (y1 < 0) { y2 = 0; y1 = n - 1; }
+        Console::ForegroundColor = ConsoleColor::White;
+        Console::BackgroundColor = ConsoleColor::Black;
+        Console::CursorLeft = 11;
+        Console::CursorTop = y1 + 5;
+        printf("%s", dan[y1]);
+
+        Console::ForegroundColor = ConsoleColor::Black;
+        Console::BackgroundColor = ConsoleColor::White;
+        Console::CursorLeft = 11;
+        Console::CursorTop = y2 + 5;
+        printf("%s", dan[y2]);
+        c = _getch();
+    }
+    exit(0);
+}
+
+void showMostExpensive(struct car* cars, int NC) {
+    long maxPrice = 0;
+    int i, index = 0;
+    for (i = 0; i < NC; i++) {
+        if (cars[i].price > maxPrice) {
+            maxPrice = cars[i].price;
+            index = i;
+        }
+    }
+    Console::ForegroundColor = ConsoleColor::Yellow;
+    Console::BackgroundColor = ConsoleColor::Black;
+    Console::Clear();
+    Console::CursorLeft = 10;
+    Console::CursorTop = 5;
+    printf("Самая дорогая машина:");
+    Console::CursorLeft = 10;
+    Console::CursorTop = 6;
+    printf("%s, цвет %s, %s, %d год, цена %ld руб.", cars[index].model, cars[index].color,
+        cars[index].bodyType, cars[index].year, cars[index].price);
+    _getch();
+}
+
+void showLatestPurchase(struct car* cars, int NC) {
+    char latestDate[11] = "0000-00-00";
+    int i, index = 0;
+    for (i = 0; i < NC; i++) {
+        if (strcmp(cars[i].purchaseDate, latestDate) > 0) {
+            strcpy(latestDate, cars[i].purchaseDate);
+            index = i;
+        }
+    }
+
+    char formattedDate[20] = "";
+    text_data(formattedDate, cars[index].purchaseDate);
+
+    Console::ForegroundColor = ConsoleColor::Yellow;
+    Console::BackgroundColor = ConsoleColor::Black;
+    Console::Clear();
+    Console::CursorLeft = 10;
+    Console::CursorTop = 5;
+    printf("Последняя купленная машина:");
+    Console::CursorLeft = 10;
+    Console::CursorTop = 6;
+    printf("%s, цвет %s, %s, %d год, цена %ld руб., дата покупки %s.", cars[index].model, cars[index].color,
+        cars[index].bodyType, cars[index].year, cars[index].price, formattedDate);
+    _getch();
+}
+
+void showAlphabeticalLists(struct car* cars, int NC) {
+    int i, j;
+    // Сортировка по алфавиту
+    for (i = 0; i < NC - 1; i++) {
+        for (j = i + 1; j < NC; j++) {
+            if (strcmp(cars[i].model, cars[j].model) > 0) {
+                struct car temp = cars[i];
+                cars[i] = cars[j];
+                cars[j] = temp;
+            }
+        }
+    }
+
+    // Вывод алфавитного списка
+    Console::ForegroundColor = ConsoleColor::Black;
+    Console::BackgroundColor = ConsoleColor::Gray;
+    Console::Clear();
+    Console::CursorLeft = 0;
+    Console::CursorTop = 5;
+    printf("Алфавитный список всех машин:\n");
+    for (i = 0; i < NC; i++) {
+        Console::CursorLeft = 10;
+        Console::CursorTop = i + 6;
+        printf("\n");
+        printf("%-20s Цена: %ld руб.", cars[i].model, cars[i].price);
+    }
+
+    // Расстояние между списками
+	    // Расстояние между списками
+    Console::CursorLeft = 40;
+    Console::CursorTop = 5;
+    printf("                                             ");
+
+    // Сортировка в обратном порядке
+    for (i = 0; i < NC - 1; i++) {
+        for (j = i + 1; j < NC; j++) {
+            if (strcmp(cars[i].model, cars[j].model) < 0) {
+                struct car temp = cars[i];
+                cars[i] = cars[j];
+                cars[j] = temp;
+            }
+        }
+    }
+
+    // Вывод обратного алфавитного списка
+    Console::CursorLeft = 60;
+    Console::CursorTop = 5;
+    printf("Обратный алфавитный список всех машин:\n");
+    for (i = 0; i < NC; i++) {
+        Console::CursorLeft = 60;
+        Console::CursorTop = i + 7;
+        printf("%-20s Цена: %ld руб.", cars[i].model, cars[i].price);
+    }
+
+    _getch();
+}
+
+void showDiagram(struct car* cars, int NC) {
+    const int maxYearDiff = 30; // Предполагаемый максимальный интервал лет
+    int yearCounts[maxYearDiff] = { 0 }; // Массив для подсчета количества машин по годам
+    int minYear = 9999, maxYear = 0;
+
+    // Определяем минимальный и максимальный год для создания диапазона
+    for (int i = 0; i < NC; i++) {
+        if (cars[i].year < minYear) minYear = cars[i].year;
+        if (cars[i].year > maxYear) maxYear = cars[i].year;
+    }
+
+    // Подсчитываем количество машин для каждого года
+    for (int i = 0; i < NC; i++) {
+        int yearIndex = cars[i].year - minYear; // Индекс в массиве
+        yearCounts[yearIndex]++;
+    }
+
+    // Вывод диаграммы
+    Console::ForegroundColor = ConsoleColor::Black;
+    Console::BackgroundColor = ConsoleColor::White;
+    Console::Clear();
+    printf("Количество машин проданных в определенный год\n");
+    for (int i = 0; i <= maxYear - minYear; i++) {
+        Console::CursorLeft = 5;
+        Console::CursorTop = i + 2;
+        Console::Write("{0} год: ", minYear + i);
+        if (yearCounts[i] > 0) { // Проверяем, есть ли машины для данного года
+            for (int j = 0; j < yearCounts[i]; j++) { // Рисуем столбец диаграммы
+                Console::BackgroundColor = ConsoleColor::Blue;
+                Console::Write(" ");
+                Console::BackgroundColor = ConsoleColor::White;
+            }
+            Console::Write(" {0}", yearCounts[i]); // Выводим количество машин
+        }
+        else { // Если нет продаж, выводим ноль
+            Console::Write(" 0");
+        }
+    }
+
+    _getch();
+}
+
+void showSameColorDifferentYear(struct car* cars, int NC) {
+    Console::ForegroundColor = ConsoleColor::Yellow;
+    Console::BackgroundColor = ConsoleColor::Black;
+    Console::Clear();
+    Console::CursorLeft = 0;
+    Console::CursorTop = 5;
+
+    bool found = false;
+    for (int i = 0; i < NC - 1; i++) {
+        for (int j = i + 1; j < NC; j++) {
+            if (strcmp(cars[i].color, cars[j].color) == 0 && cars[i].year != cars[j].year) {
+                printf("Да, такие машины есть:\n\n");
+                printf("%-20s %-10s %7d\n", cars[i].model, cars[i].color, cars[i].year);
+                printf("%-20s %-10s %7d\n", cars[j].model, cars[j].color, cars[j].year);
+                found = true;
+                break;
+            }
+        }
+        if (found) break;
+    }
+    if (!found) {
+        printf("Нет машин с одинаковым цветом, но разным годом выпуска.\n");
+    }
+
+    _getch();
+}
+
+void text_data(char* s, char* sd) {
+    char s0[3], month[12][9] = {
+        "января","февраля","марта","апреля","мая","июня",
+        "июля","августа","сентября","октября","ноября","декабря"
+    };
+
+    strncpy(s0, sd + 5, 2);
+    s0[2] = 0;
+    strcat(s, sd + 8);
+    strcat(s, " ");
+    strcat(s, month[atoi(s0) - 1]);
+    strcat(s, " ");
+    strncat(s, sd, 4);
+}
+
+
